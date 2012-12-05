@@ -876,6 +876,7 @@ endif
 # Build files and then package it into the rom formats
 .PHONY: droidcore
 droidcore: kernelimage \
+	kernelmodules \
 	bootloader \
 	files \
 	systemimage \
