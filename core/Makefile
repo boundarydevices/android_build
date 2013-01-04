@@ -688,6 +688,11 @@ else
 ifeq ($(TARGET_USERIMAGES_USE_EXT4),true)
 INTERNAL_USERIMAGES_USE_EXT := true
 INTERNAL_USERIMAGES_EXT_VARIANT := ext4
+else
+ifeq ($(TARGET_USERIMAGES_USE_UBIFS),true)
+# FIXME: this borrow ext's var to generate it.
+INTERNAL_USERIMAGES_EXT_VARIANT := ubifs
+endif
 endif
 endif
 endif
@@ -708,6 +713,12 @@ INTERNAL_USERIMAGES_DEPS := $(SIMG2IMG)
 INTERNAL_USERIMAGES_DEPS += $(MKEXTUSERIMG) $(MAKE_EXT4FS) $(E2FSCK)
 ifeq ($(TARGET_USERIMAGES_USE_F2FS),true)
 INTERNAL_USERIMAGES_DEPS += $(MKF2FSUSERIMG) $(MAKE_F2FS)
+endif
+else
+ifeq ($(TARGET_USERIMAGES_USE_UBIFS),true)
+INTERNAL_USERIMAGES_DEPS := $(MKUBIFS)
+else
+INTERNAL_USERIMAGES_DEPS := $(MKYAFFS2)
 endif
 endif
 
@@ -764,6 +775,7 @@ $(if $(filter true,$(BOARD_BUILD_SYSTEM_ROOT_IMAGE)),\
     $(hide) echo "system_root_image=true" >> $(1);\
     echo "ramdisk_dir=$(TARGET_ROOT_OUT)" >> $(1))
 $(if $(2),$(hide) $(foreach kv,$(2),echo "$(kv)" >> $(1);))
+$(if $(TARGET_MKUBIFS_ARGS),$(hide) echo "mkfsubifs_flags=$(TARGET_MKUBIFS_ARGS)" >> $(1))
 endef
 
 # -----------------------------------------------------------------
@@ -957,6 +969,8 @@ HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
 TARGET_PREBUILT_KERNEL := $(PRODUCT_OUT)/kernel
 KERNEL_CONFIGURE := kernel_imx/.config
+KERNEL_ZIMAGE    := kernel_imx/arch/arm/boot/zImage
+KERNEL_UIMAGE    := kernel_imx/arch/arm/boot/uImage
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 KERNEL_HEADERS_INSTALL := $(KERNEL_OUT)/usr
 
@@ -972,11 +986,28 @@ $(KERNEL_HEADERS_INSTALL): $(KERNEL_CONFIGURE)
 
 $(TARGET_PREBUILT_KERNEL): $(KERNEL_CONFIGURE)
 	$(MAKE) -C kernel_imx -j$(HOST_PROCESSOR) uImage $(KERNEL_ENV)
-	install -D kernel_imx/arch/arm/boot/uImage $(PRODUCT_OUT)/uImage
-	install -D kernel_imx/arch/arm/boot/zImage $(PRODUCT_OUT)/kernel
+	install -D $(KERNEL_UIMAGE)  $(PRODUCT_OUT)/uImage
+	install -D $(KERNEL_ZIMAGE)  $(PRODUCT_OUT)/kernel
 
 else
 kernelimage:
+endif
+
+# ----------------------------------------------------------------
+# support ubifs rules:
+.PHONY: ubiimagesgenerate
+ifeq ($(TARGET_USERIMAGES_USE_UBIFS),true)
+UBI_RAW_IMAGE := $(PRODUCT_OUT)/android_root.img
+
+.PHONY: $(UBI_RAW_IMAGE)
+
+ubiimagesgenerate: $(UBI_RAW_IMAGE)
+
+$(UBI_RAW_IMAGE) : $(INSTALLED_USERDATAIMAGE_TARGET) systemimage
+	$(call pretty,"Generating UBI raw image:" "$(UBI_RAW_IMAGE)" "$(UBI_RAW_RECO_IMAGE)")
+	$(MKUBIRAW) -o $(UBI_RAW_IMAGE) $(TARGET_UBIRAW_ARGS)
+else
+ubiimagesgenerate:
 endif
 
 .PHONY: recoveryimage
