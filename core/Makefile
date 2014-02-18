@@ -928,6 +928,14 @@ define build-recoveryimage-target
   $(if $(filter true,$(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_SUPPORTS_VBOOT)), \
     $(VBOOT_SIGNER) $(FUTILITY) $(1).unsigned $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_KEY).vbpubk $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_KEY).vbprivk $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_SUBKEY).vbprivk $(1).keyblock $(1))
   $(hide) $(call assert-max-image-size,$(1),$(BOARD_RECOVERYIMAGE_PARTITION_SIZE))
+  for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
+	DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
+	DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
+	RECOVERY_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$(1)); \
+    $(MKBOOTIMG) $(INTERNAL_RECOVERYIMAGE_ARGS) --second kernel_imx/arch/arm/boot/dts/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $(1); \
+    $(call assert-max-image-size,$(1),$(BOARD_RECOVERYIMAGE_PARTITION_SIZE),raw); \
+    cp -f $@ $$RECOVERY_IMAGE_BOARD; \
+  done
   @echo ----- Made recovery image: $(1) --------
 endef
 
