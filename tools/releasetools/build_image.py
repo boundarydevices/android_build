@@ -431,6 +431,7 @@ def ImagePropFromGlobalDict(glob_dict, mount_point):
   for p in common_props:
     copy_prop(p, p)
 
+  copy_prop("mkfsubifs_flags", "mkfsubifs_flags")
   d["mount_point"] = mount_point
   if mount_point == "system":
     copy_prop("fs_type", "fs_type")
@@ -478,6 +479,7 @@ def LoadGlobalDict(filename):
       continue
     k, v = line.split("=", 1)
     d[k] = v
+
   f.close()
   return d
 
