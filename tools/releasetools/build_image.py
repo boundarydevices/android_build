@@ -425,8 +425,8 @@ def ImagePropFromGlobalDict(glob_dict, mount_point):
       "skip_fsck",
       "verity",
       "verity_key",
-      "verity_signer_cmd"
-      "mkfsubifs_flags",
+      "verity_signer_cmd",
+      "mkfsubifs_flags"
       )
   for p in common_props:
     copy_prop(p, p)
