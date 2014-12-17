@@ -1160,13 +1160,18 @@ define build-systemimage-target
                echo "The max is $$(( $(BOARD_SYSTEMIMAGE_PARTITION_SIZE) / 1048576 )) MB." 1>&2 ;\
            fi; \
            mkdir -p $(DIST_DIR); cp $(INSTALLED_FILES_FILE) $(DIST_DIR)/installed-files-rescued.txt; \
-           exit 1 )
+           exit 1 ) 
 endef
 
 $(BUILT_SYSTEMIMAGE): $(FULL_SYSTEMIMAGE_DEPS) $(INSTALLED_FILES_FILE)
 	$(call build-systemimage-target,$@)
 
+ifeq ($(INTERNAL_USERIMAGES_USE_EXT),true)
+INSTALLED_SYSTEMIMAGE := $(PRODUCT_OUT)/system_sparse.img
+else
 INSTALLED_SYSTEMIMAGE := $(PRODUCT_OUT)/system.img
+endif
+
 SYSTEMIMAGE_SOURCE_DIR := $(TARGET_OUT)
 
 # The system partition needs room for the recovery image as well.  We
@@ -1191,6 +1196,9 @@ $(INSTALLED_SYSTEMIMAGE): $(BUILT_SYSTEMIMAGE) $(RECOVERY_FROM_BOOT_PATCH) | $(A
 	@echo "Install system fs image: $@"
 	$(copy-file-to-target)
 	$(hide) $(call assert-max-image-size,$@ $(RECOVERY_FROM_BOOT_PATCH),$(BOARD_SYSTEMIMAGE_PARTITION_SIZE))
+	if [ $(INTERNAL_USERIMAGES_USE_EXT) = true ]; then \
+        simg2img $(PRODUCT_OUT)/system_sparse.img $(PRODUCT_OUT)/system.img; \
+        fi
 
 systemimage: $(INSTALLED_SYSTEMIMAGE)
 
