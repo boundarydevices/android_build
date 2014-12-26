@@ -258,7 +258,7 @@ def BuildImage(in_dir, prop_dict, out_file,
     build_command.extend([out_file, prop_dict["partition_size"]])
   elif fs_type.startswith("ubifs"):
     # add ubifs image generate support.
-    build_command = ["mkfs.ubifs", "-d"]
+    build_command = ["mkfs_ubifs", "-d"]
     build_command.append(in_dir)
     build_command.append("-o")
     build_command.append(out_file)
