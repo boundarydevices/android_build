@@ -959,6 +959,7 @@ TARGET_PREBUILT_KERNEL := $(PRODUCT_OUT)/kernel
 KERNEL_CONFIGURE := kernel_imx/.config
 TARGET_KERNEL_CONFIGURE := $(PRODUCT_OUT)/.config
 KERNEL_ZIMAGE    := kernel_imx/arch/arm/boot/zImage
+KERNEL_UIMAGE    := kernel_imx/arch/arm/boot/uImage
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 
 
