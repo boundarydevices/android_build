@@ -516,6 +516,7 @@ $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_FILES) $(BOOT_S
                 DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
                 DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
                 BOOT_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$@); \
+                cp -f $(PRODUCT_OUT)/$$DTS_BOARD $(PRODUCT_OUT)/boot/; \
                 $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_ARGS) --second $(PRODUCT_OUT)/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $@; \
         $(BOOT_SIGNER) /boot $@ $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).pk8 $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).x509.pem $@; \
                 $(call assert-max-image-size,$@,$(BOARD_BOOTIMAGE_PARTITION_SIZE)); \
@@ -537,6 +538,7 @@ $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_FILES)
 		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
 		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
 		BOOT_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$@); \
+		cp -f $(PRODUCT_OUT)/$$DTS_BOARD $(PRODUCT_OUT)/boot/; \
 		$(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_ARGS) --second $(PRODUCT_OUT)/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $@; \
 	    $(call assert-max-image-size,$@,$(BOARD_BOOTIMAGE_PARTITION_SIZE)); \
 		cp -f $@ $$BOOT_IMAGE_BOARD; \
