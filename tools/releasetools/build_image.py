@@ -303,6 +303,9 @@ def BuildImage(in_dir, prop_dict, out_file, target_out=None):
     build_command.append(in_dir)
     build_command.append("-o")
     build_command.append(out_file)
+    build_command.append("-s")
+    if "selinux_fc" in prop_dict:
+      build_command.append(prop_dict["selinux_fc"])
     if prop_dict.get("mkfsubifs_flags", None):
       build_command.extend(prop_dict["mkfsubifs_flags"].split())
   else:
@@ -430,7 +433,6 @@ def ImagePropFromGlobalDict(glob_dict, mount_point):
       )
   for p in common_props:
     copy_prop(p, p)
-
   copy_prop("mkfsubifs_flags", "mkfsubifs_flags")
   d["mount_point"] = mount_point
   if mount_point == "system":
