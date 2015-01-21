@@ -291,8 +291,14 @@ class EdifyGenerator(object):
       args = {'device': p.device, 'fn': fn}
       if partition_type == "MTD":
         self.script.append(
-            'write_raw_image(package_extract_file("%(fn)s"), "%(device)s");'
+            'package_extract_file("%(fn)s", "/tmp/boot.img");'
             % args)
+        self.script.append(
+            'write_raw_image("/tmp/boot.img", "bootimg");')
+
+        self.script.append(
+            'delete("/tmp/boot.img");')
+	
       elif partition_type == "EMMC":
         if mapfn:
           args["map"] = mapfn
