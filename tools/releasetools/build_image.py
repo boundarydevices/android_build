@@ -504,7 +504,7 @@ def main(argv):
   else:
     image_filename = os.path.basename(out_file)
     mount_point = ""
-    if image_filename == "system.img":
+    if image_filename == "system.img" or image_filename == "system_sparse.img" :
       mount_point = "system"
     elif image_filename == "userdata.img":
       mount_point = "data"
