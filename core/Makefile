@@ -508,14 +508,15 @@ else ifeq (true,$(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_SUPPORTS_BOOT_SIGNER)) # 
 $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_FILES) $(BOOT_SIGNER)
 	$(call pretty,"Target boot image: $@")
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
-		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
-		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
-		BOOT_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$@); \
-		$(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_ARGS) --second $(PRODUCT_OUT)/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $@; \
-	$(BOOT_SIGNER) /boot $@ $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).pk8 $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).x509.pem $@
-	        $(call assert-max-image-size,$@,$(BOARD_BOOTIMAGE_PARTITION_SIZE)); \
-		cp -f $@ $$BOOT_IMAGE_BOARD; \
-	done
+                DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
+                DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
+                BOOT_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$@); \
+                $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_ARGS) --second $(PRODUCT_OUT)/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $@; \
+        $(BOOT_SIGNER) /boot $@ $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).pk8 $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).x509.pem $@; \
+                $(call assert-max-image-size,$@,$(BOARD_BOOTIMAGE_PARTITION_SIZE)); \
+                cp -f $@ $$BOOT_IMAGE_BOARD; \
+        done
+
 .PHONY: bootimage-nodeps
 bootimage-nodeps: $(MKBOOTIMG) $(BOOT_SIGNER)
 	@echo "make $@: ignoring dependencies"
@@ -936,7 +937,7 @@ define build-recoveryimage-target
 	RECOVERY_IMAGE_BOARD=$(patsubst %.img,%-$$DTS_PLATFORM.img,$(1)); \
 	$(MKBOOTIMG) $(INTERNAL_RECOVERYIMAGE_ARGS) --second $(PRODUCT_OUT)/$$DTS_BOARD $(BOARD_MKBOOTIMG_ARGS) --output $(1); \
 	if [ $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_SUPPORTS_VERITY) = true ]; then \
-	  $(BOOT_SIGNER) /recovery $(1) $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).pk8 $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).x509.pem $(1)
+	  $(BOOT_SIGNER) /recovery $(1) $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).pk8 $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VERITY_SIGNING_KEY).x509.pem $(1) \
 	fi;\
     $(call assert-max-image-size,$(1),$(BOARD_RECOVERYIMAGE_PARTITION_SIZE)); \
     cp -f $(1) $$RECOVERY_IMAGE_BOARD; \
