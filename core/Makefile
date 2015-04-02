@@ -980,6 +980,7 @@ $(KERNEL_UIMAGE): $(KERNEL_CONFIGURE)
 
 $(TARGET_PREBUILT_KERNEL): $(KERNEL_UIMAGE)
 	install -D $(KERNEL_UIMAGE)  $(PRODUCT_OUT)/uImage
+	install -D $(KERNEL_UIMAGE)  $(PRODUCT_OUT)/boot/uImage
 	install -D $(KERNEL_ZIMAGE)  $(PRODUCT_OUT)/kernel
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
 		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
