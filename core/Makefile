@@ -1365,28 +1365,24 @@ endif
 ifneq ($(strip $(TARGET_NO_KERNEL)),true)
 ifeq ($(TARGET_ARCH),arm64)
 KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
-KERNEL_IMAGE_NAME    := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/Image
+KERNEL_IMAGE_NAME    := Image
 else
 KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
-KERNEL_IMAGE_NAME    := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/zImage
+KERNEL_IMAGE_NAME    := zImage
 endif
+KERNEL_IMAGE_PATH := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/$(KERNEL_IMAGE_NAME)
 KERNEL_CFLAGS := KCFLAGS=-mno-android
 KERNEL_ENV := ARCH=$(TARGET_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_TOOLCHAIN) LOADADDR=$(LOAD_KERNEL_ENTRY) $(KERNEL_CFLAGS)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
-INSTALLED_KERNEL_TARGET := $(KERNEL_OUT)/kernel_img
-TARGET_PREBUILT_KERNEL := $(KERNEL_OUT)/kernel_img
-KERNEL_CONFIGURE := $(KERNEL_IMX_PATH)/kernel_imx/.config
+INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/boot/$(KERNEL_IMAGE_NAME)
+TARGET_PREBUILT_KERNEL := $(INSTALLED_KERNEL_TARGET)
 TARGET_KERNEL_CONFIGURE := $(KERNEL_OUT)/.config
-
 
 .PHONY: $(TARGET_PREBUILT_KERNEL)
 kernelimage: $(TARGET_PREBUILT_KERNEL)
 
-$(KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF)
-
-$(TARGET_KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF) $(KERNEL_CONFIGURE)
-	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
-	install -D $(KERNEL_CONFIGURE) $(TARGET_KERNEL_CONFIGURE)
+$(TARGET_KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF)
+	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
 
 ifeq ($(TARGET_ARCH),arm64)
 DTS_ADDITIONAL_PATH := freescale
@@ -1397,11 +1393,11 @@ $(TARGET_PREBUILT_KERNEL): $(TARGET_KERNEL_CONFIGURE) | $(KERNEL_OUT)
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx mrproper
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) -j$(HOST_PROCESSOR) $(KERNEL_ENV)
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) dtbs $(KERNEL_ENV)
-	install -D $(KERNEL_IMAGE_NAME)  $(KERNEL_OUT)/kernel_img
+	install -D $(KERNEL_IMAGE_PATH) $(PRODUCT_OUT)/boot/$(KERNEL_IMAGE_NAME)
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
 		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
 		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
-		install -D $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(KERNEL_OUT)/$$DTS_BOARD; \
+		install -D $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(PRODUCT_OUT)/boot/$$DTS_BOARD; \
 	done
 else
 kernelimage:
@@ -1409,28 +1405,17 @@ endif
 
 .PHONY: kernelmodules
 
-kernel_modules_src_list :=
-kernel_modules_dist_list :=
-
-$(foreach cf,$(TARGET_KERNEL_MODULES),							\
-$(eval _src := $(call word-colon,1,$(cf)))						\
-$(eval _dest := $(call word-colon,2,$(cf)))						\
-$(eval kernel_modules_src_list += $(_src))						\
-$(eval kernel_modules_dest_list += $(call append-path,$(PRODUCT_OUT),$(_dest))))
-
-ifneq ($(strip $(kernel_modules_src_list)),)
+ifneq ($(strip $(TARGET_KERNEL_MODULES)),)
 
 kernelmodules: $(TARGET_PREBUILT_KERNEL) | $(ACP)
-	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx modules $(KERNEL_ENV)
 	$(hide) $(foreach cf, $(TARGET_KERNEL_MODULES),				\
-	$(eval _src := $(call word-colon,1,$(cf)))				\
+	$(eval _src := $(call word-colon,1,$(KERNEL_OUT)/$(cf)))		\
 	$(eval _dest := $(call word-colon,2,$(cf)))				\
 	$(eval _full_dest := $(call append-path,$(PRODUCT_OUT),$(_dest)))	\
-	$(eval _dest_dir := $(call dir, $(_full_dest))) 			\
-	mkdir -p $(_dest_dir); 							\
+	$(eval _dest_dir := $(dir $(_full_dest))) 			\
+	$(hide) mkdir -p $(_dest_dir); 							\
 	$(ACP) $(_src) $(_full_dest);						\
 	)
-	@echo "install kernel modules: $(kernel_modules_src_list)"
 else
 kernelmodules:
 endif
@@ -1534,7 +1519,7 @@ define build-systemimage-target
            exit 1 )
 endef
 
-$(BUILT_SYSTEMIMAGE): $(FULL_SYSTEMIMAGE_DEPS) $(INSTALLED_FILES_FILE) $(BUILD_IMAGE_SRCS)
+$(BUILT_SYSTEMIMAGE): kernelmodules $(FULL_SYSTEMIMAGE_DEPS) $(INSTALLED_FILES_FILE) $(BUILD_IMAGE_SRCS)
 	$(call build-systemimage-target,$@)
 
 INSTALLED_SYSTEMIMAGE := $(PRODUCT_OUT)/system.img
@@ -1966,7 +1951,7 @@ endef
 
 # We just build this directly to the install location.
 INSTALLED_VENDORIMAGE_TARGET := $(BUILT_VENDORIMAGE_TARGET)
-$(INSTALLED_VENDORIMAGE_TARGET): $(INTERNAL_USERIMAGES_DEPS) $(INTERNAL_VENDORIMAGE_FILES) $(INSTALLED_FILES_FILE_VENDOR) $(BUILD_IMAGE_SRCS) $(DEPMOD) $(BOARD_VENDOR_KERNEL_MODULES)
+$(INSTALLED_VENDORIMAGE_TARGET): kernelmodules $(INTERNAL_USERIMAGES_DEPS) $(INTERNAL_VENDORIMAGE_FILES) $(INSTALLED_FILES_FILE_VENDOR) $(BUILD_IMAGE_SRCS) $(DEPMOD) $(BOARD_VENDOR_KERNEL_MODULES)
 	$(build-vendorimage-target)
 
 .PHONY: vendorimage-nodeps vnod
