@@ -1146,7 +1146,6 @@ HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
 TARGET_PREBUILT_KERNEL := $(PRODUCT_OUT)/kernel
 KERNEL_CONFIGURE := kernel_imx/.config
-TARGET_KERNEL_CONFIGURE := $(PRODUCT_OUT)/.config
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 
 
@@ -1154,24 +1153,25 @@ KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 kernelimage: $(TARGET_PREBUILT_KERNEL)
 
 $(KERNEL_CONFIGURE): kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF)
-
-$(TARGET_KERNEL_CONFIGURE): kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF) $(KERNEL_CONFIGURE)
 	$(MAKE) -C kernel_imx $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
-	install -D $(KERNEL_CONFIGURE) $(TARGET_KERNEL_CONFIGURE)
 
 ifeq ($(TARGET_ARCH),arm64)
 DTS_ADDITIONAL_PATH := freescale
 else
 DTS_ADDITIONAL_PATH :=
 endif
-$(TARGET_PREBUILT_KERNEL): $(TARGET_KERNEL_CONFIGURE)
+
+$(KERNEL_IMAGE_NAME): $(KERNEL_CONFIGURE)
 	$(MAKE) -C kernel_imx -j$(HOST_PROCESSOR) $(KERNEL_ENV)
 	$(MAKE) -C kernel_imx dtbs $(KERNEL_ENV)
+
+$(TARGET_PREBUILT_KERNEL): $(KERNEL_IMAGE_NAME)
 	install -D $(KERNEL_IMAGE_NAME)  $(PRODUCT_OUT)/kernel
+	install -D $(KERNEL_IMAGE_NAME)  $(PRODUCT_OUT)/boot/
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
 		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
 		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
-		install -D kernel_imx/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(PRODUCT_OUT)/$$DTS_BOARD; \
+		install -D kernel_imx/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(PRODUCT_OUT)/boot/$$DTS_BOARD; \
 	done
 else
 kernelimage:
@@ -1196,7 +1196,7 @@ kernelmodules: $(TARGET_PREBUILT_KERNEL) | $(ACP)
 	$(eval _src := $(call word-colon,1,$(cf)))				\
 	$(eval _dest := $(call word-colon,2,$(cf)))				\
 	$(eval _full_dest := $(call append-path,$(PRODUCT_OUT),$(_dest)))	\
-	$(eval _dest_dir := $(call dir, $(_full_dest))) 			\
+	$(eval _dest_dir := $(dir $(_full_dest))) 				\
 	mkdir -p $(_dest_dir); 							\
 	$(ACP) $(_src) $(_full_dest);						\
 	)
@@ -1311,7 +1311,7 @@ define build-systemimage-target
            exit 1 )
 endef
 
-$(BUILT_SYSTEMIMAGE): $(FULL_SYSTEMIMAGE_DEPS) $(INSTALLED_FILES_FILE)
+$(BUILT_SYSTEMIMAGE): kernelmodules $(FULL_SYSTEMIMAGE_DEPS) $(INSTALLED_FILES_FILE)
 	$(call build-systemimage-target,$@)
 
 INSTALLED_SYSTEMIMAGE := $(PRODUCT_OUT)/system.img
