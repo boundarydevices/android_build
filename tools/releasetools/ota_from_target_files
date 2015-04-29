@@ -460,6 +460,15 @@ def CalculateFingerprint(oem_props, oem_dict, info_dict):
     GetBuildProp("ro.build.thumbprint", info_dict))
 
 
+def CopyBootFiles(output_zip=None):
+  """Copies files from boot/ folder of the OUT directory to the output zip.
+  """
+  boot_path = os.environ['OUT'] + '/boot/'
+  for base_name in os.listdir(boot_path):
+    if output_zip is not None:
+      output_zip.write(boot_path + base_name, 'boot/' + base_name)
+
+
 def GetImage(which, tmpdir, info_dict):
   # Return an image object (suitable for passing to BlockImageDiff)
   # for the 'which' partition (most be "system" or "vendor").  If a
@@ -605,23 +614,15 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   else:
     script.FormatPartition("/system")
     script.Mount("/system", recovery_mount_options)
-    if not has_recovery_patch:
-      script.UnpackPackageDir("recovery", "/system")
     script.UnpackPackageDir("system", "/system")
 
     symlinks = CopyPartitionFiles(system_items, input_zip, output_zip)
     script.MakeSymlinks(symlinks)
 
-  boot_img = common.GetBootableImage("boot.img", "boot.img",
-                                     OPTIONS.input_tmp, "BOOT")
-
   if not block_based:
     def output_sink(fn, data):
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn, dir=False)
-
-    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
-                             recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
     script.AppendExtra('if getprop("ro.boot.selinux") == "disabled" then');
@@ -650,11 +651,11 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
       vendor_items.GetMetadata(input_zip)
       vendor_items.Get("vendor").SetPermissions(script)
 
-  common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
-  common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
-
   script.ShowProgress(0.05, 5)
-  script.WriteRawImage("/boot", "boot.img")
+  script.Mount("/boot")
+  script.UnpackPackageDir("boot", "/boot")
+
+  CopyBootFiles(output_zip)
 
   script.ShowProgress(0.2, 10)
 
