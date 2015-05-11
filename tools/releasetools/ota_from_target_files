@@ -460,6 +460,14 @@ def CalculateFingerprint(oem_props, oem_dict, info_dict):
     GetBuildProp("ro.build.thumbprint", info_dict))
 
 
+def CopyRecoveryFiles(output_zip=None):
+  """Copies recovery specific files to the output zip.
+  """
+  if output_zip is not None:
+    output_zip.write(os.environ['OUT'] + '/uramdisk-recovery.img',
+                     'recovery/uramdisk.img')
+
+
 def CopyBootFiles(output_zip=None):
   """Copies files from boot/ folder of the OUT directory to the output zip.
   """
@@ -656,6 +664,12 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   script.UnpackPackageDir("boot", "/boot")
 
   CopyBootFiles(output_zip)
+
+  script.Mount("/recovery")
+  script.UnpackPackageDir("boot", "/recovery")
+  script.UnpackPackageDir("recovery", "/recovery")
+
+  CopyRecoveryFiles(output_zip)
 
   script.ShowProgress(0.2, 10)
 
