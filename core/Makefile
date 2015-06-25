@@ -1616,8 +1616,13 @@ endif
 ifdef BOARD_KERNEL_DTS
 	$(hide) echo "$(BOARD_KERNEL_DTS)" > $(zip_root)/BOOT/dtb
 endif
+ifdef DTS_PLATFORM
+	$(hide) mkdir -p $(zip_root)/RADIO;	
+	$(hide) $(ACP) $(PRODUCT_OUT)/u-boot-$(DTS_PLATFORM).imx $(zip_root)/RADIO/bootloader.img
+endif
 	$(hide) $(foreach t,$(INSTALLED_RADIOIMAGE_TARGET),\
 	            mkdir -p $(zip_root)/RADIO; \
+		    echo "INSTALLED_RADIOIMAGE_TARGET *******";\
 	            $(ACP) $(t) $(zip_root)/RADIO/$(notdir $(t));)
 	@# Contents of the system image
 	$(hide) $(call package_files-copy-root, \
@@ -1735,7 +1740,7 @@ otagenerate: $(INTERNAL_OTA_PACKAGE_TARGET)
 otapackage:
 	@echo "Package OTA Start...: $@"
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
-		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
+		export DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
 		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
 		export BOARD_KERNEL_DTS="$(PRODUCT_OUT)/$$DTS_BOARD" ; \
 		make otagenerate; \
