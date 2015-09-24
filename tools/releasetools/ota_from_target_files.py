@@ -360,6 +360,40 @@ class Item(object):
 
     recurse(self, (-1, -1, -1, -1, None, None))
 
+  def SetPermissions_NonSelinux(self, script):
+    """Append set_perm/set_perm_recursive commands to 'script' to
+    set all permissions, users, and groups for the tree of files
+    rooted at 'self'."""
+
+    self.CountChildMetadata()
+
+    def recurse(item, current):
+      # current is the (uid, gid, dmode, fmode, selabel, capabilities) tuple that the current
+      # item (and all its children) have already been set to.  We only
+      # need to issue set_perm/set_perm_recursive commands if we're
+      # supposed to be something different.
+      if item.dir:
+        if current != item.best_subtree:
+          script.SetPermissionsRecursive_NonSelinux("/"+item.name, *item.best_subtree)
+          current = item.best_subtree
+
+        if item.uid != current[0] or item.gid != current[1] or \
+           item.mode != current[2] or item.selabel != current[4] or \
+           item.capabilities != current[5]:
+          script.SetPermissions_NonSelinux("/"+item.name, item.uid, item.gid,
+                                item.mode, item.selabel, item.capabilities)
+
+        for i in item.children:
+          recurse(i, current)
+      else:
+        if item.uid != current[0] or item.gid != current[1] or \
+               item.mode != current[3] or item.selabel != current[4] or \
+               item.capabilities != current[5]:
+          script.SetPermissions_NonSelinux("/"+item.name, item.uid, item.gid,
+                                item.mode, item.selabel, item.capabilities)
+
+    recurse(self, (-1, -1, -1, -1, None, None))
+
 
 def CopyPartitionFiles(itemset, input_zip, output_zip=None, substitute=None):
   """Copies files for the partition in the input zip to the output
@@ -633,7 +667,11 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
                              recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
+    script.AppendExtra('if getprop("ro.boot.selinux") == "disabled" then');
+    system_items.Get("system").SetPermissions_NonSelinux(script)
+    script.AppendExtra('else')
     system_items.Get("system").SetPermissions(script)
+    script.AppendExtra('endif;')
 
   if HasVendorPartition(input_zip):
     vendor_items = ItemSet("vendor", "META/vendor_filesystem_config.txt")
