@@ -372,7 +372,7 @@ class Item(object):
       # item (and all its children) have already been set to.  We only
       # need to issue set_perm/set_perm_recursive commands if we're
       # supposed to be something different.
-      if item.dir:
+      if item.is_dir:
         if current != item.best_subtree:
           script.SetPermissionsRecursive_NonSelinux("/"+item.name, *item.best_subtree)
           current = item.best_subtree
