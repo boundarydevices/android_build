@@ -1000,7 +1000,8 @@ endif
 .PHONY: kernelimage
 ifneq ($(strip $(TARGET_NO_KERNEL)),true)
 KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
-KERNEL_ENV := ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS_TOOLCHAIN) LOADADDR=$(LOAD_KERNEL_ENTRY)
+KERNEL_CFLAGS := KCFLAGS=-mno-android
+KERNEL_ENV := ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS_TOOLCHAIN) LOADADDR=$(LOAD_KERNEL_ENTRY) $(KERNEL_CFLAGS)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
 INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
 TARGET_PREBUILT_KERNEL := $(PRODUCT_OUT)/kernel
