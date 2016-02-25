@@ -1632,7 +1632,10 @@ name := $(name)-ota-$(FILE_NAME_TAG)
 
 block_file := 
 ifneq ($(TARGET_USERIMAGES_USE_UBIFS),true)
+# block updates require to use sparse images
+ifneq (true,$(TARGET_USERIMAGES_SPARSE_EXT_DISABLED))
 block_file := --block
+endif
 endif
 
 INTERNAL_OTA_PACKAGE_TARGET := $(PRODUCT_OUT)/$(name).zip
