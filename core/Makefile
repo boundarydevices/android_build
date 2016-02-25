@@ -574,6 +574,16 @@ bootimage-nodeps: $(MKBOOTIMG) $(VBOOT_SIGNER)
 	$(VBOOT_SIGNER) $(FUTILITY) $(INSTALLED_BOOTIMAGE_TARGET).unsigned $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_KEY).vbpubk $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_KEY).vbprivk $(PRODUCTS.$(INTERNAL_PRODUCT).PRODUCT_VBOOT_SIGNING_SUBKEY).vbprivk $(INSTALLED_BOOTIMAGE_TARGET).keyblock $(INSTALLED_BOOTIMAGE_TARGET)
 	$(hide) $(call assert-max-image-size,$(INSTALLED_BOOTIMAGE_TARGET),$(BOARD_BOOTIMAGE_PARTITION_SIZE))
 
+else ifeq (true, $(TARGET_BOOTIMAGE_USE_EXT4))
+$(INSTALLED_BOOTIMAGE_TARGET): $(MKEXTUSERIMG) $(INTERNAL_BOOTIMAGE_FILES) $(RAMDISK_TARGET)
+	$(call pretty,"Target boot image: $@")
+	$(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/boot $@ ext4 boot $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L boot
+
+.PHONY: bootimage-nodeps
+bootimage-nodeps: $(MKEXTUSERIMG)
+	@echo "make $@: ignoring dependencies"
+	$(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/boot $@ ext4 boot $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L boot
+
 else # PRODUCT_SUPPORTS_VBOOT != true
 
 $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_FILES)
@@ -1038,6 +1048,14 @@ define build-recoveryimage-target
   $(if $(filter true,$(BOARD_USES_RECOVERY_AS_BOOT)), \
     $(hide) $(call assert-max-image-size,$(1),$(BOARD_BOOTIMAGE_PARTITION_SIZE)), \
     $(hide) $(call assert-max-image-size,$(1),$(BOARD_RECOVERYIMAGE_PARTITION_SIZE)))
+  if [ "true" = "$(TARGET_RECOVERYIMAGE_USE_EXT4)" ]; then \
+  rm -rf $(PRODUCT_OUT)/recovery_img; \
+  cp -rf $(PRODUCT_OUT)/boot $(PRODUCT_OUT)/recovery_img; \
+  mkimage -A arm -O linux -T ramdisk -n "RAM Disk" -d $(recovery_ramdisk) \
+  $(PRODUCT_OUT)/uramdisk-recovery.img; \
+  cp -f $(PRODUCT_OUT)/uramdisk-recovery.img $(PRODUCT_OUT)/recovery_img/uramdisk.img; \
+  $(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/recovery_img $@ ext4 recovery $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L recovery ; \
+  else \
   for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
     DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
     DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
@@ -1048,7 +1066,8 @@ define build-recoveryimage-target
     fi;\
     $(call assert-max-image-size,$(1),$(BOARD_RECOVERYIMAGE_PARTITION_SIZE)); \
     cp -f $(1) $$RECOVERY_IMAGE_BOARD; \
-  done
+  done \
+  fi;
   @echo ----- Made recovery image: $(1) --------
 endef
 
@@ -1071,7 +1090,7 @@ $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MINIGZIP) \
 		$(call build-recoveryimage-target, $@)
 endif
 
-$(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MINIGZIP) \
+$(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MKEXTUSERIMG) $(MINIGZIP) \
 		$(INSTALLED_RAMDISK_TARGET) \
 		$(INSTALLED_BOOTIMAGE_TARGET) \
 		$(INTERNAL_RECOVERYIMAGE_FILES) \
@@ -1326,6 +1345,7 @@ ifneq ($(INSTALLED_RECOVERYIMAGE_TARGET),)
 ifneq ($(BOARD_USES_FULL_RECOVERY_IMAGE),true)
 intermediates := $(call intermediates-dir-for,PACKAGING,recovery_patch)
 RECOVERY_FROM_BOOT_PATCH := $(intermediates)/recovery_from_boot.p
+ifneq ($(TARGET_RECOVERYIMAGE_USE_EXT4),true)
 $(RECOVERY_FROM_BOOT_PATCH): $(INSTALLED_RECOVERYIMAGE_TARGET) \
                              $(INSTALLED_BOOTIMAGE_TARGET) \
 			     $(HOST_OUT_EXECUTABLES)/imgdiff \
@@ -1333,6 +1353,12 @@ $(RECOVERY_FROM_BOOT_PATCH): $(INSTALLED_RECOVERYIMAGE_TARGET) \
 	@echo "Construct recovery from boot"
 	mkdir -p $(dir $@)
 	PATH=$(HOST_OUT_EXECUTABLES):$$PATH $(HOST_OUT_EXECUTABLES)/imgdiff $(INSTALLED_BOOTIMAGE_TARGET) $(INSTALLED_RECOVERYIMAGE_TARGET) $@
+else
+$(RECOVERY_FROM_BOOT_PATCH):
+	@echo "Fake recovery_from_boot.p creation"
+	mkdir -p $(dir $@)
+	@echo "recovery_from_boot.p cannot be used with ext4 images" > $@
+endif
 else # $(BOARD_USES_FULL_RECOVERY_IMAGE) == true
 RECOVERY_FROM_BOOT_PATCH := $(INSTALLED_RECOVERYIMAGE_TARGET)
 endif
