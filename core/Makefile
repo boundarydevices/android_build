@@ -1053,6 +1053,98 @@ else # INSTALLED_RECOVERYIMAGE_TARGET not defined
 RECOVERY_RESOURCE_ZIP :=
 endif
 
+.PHONY: bootloader
+ifneq ($(strip $(TARGET_BOOTLOADER_CONFIG)),)
+BOOTLOADER_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
+BOOTLOADER_ENV := ARCH=arm CROSS_COMPILE=$(BOOTLOADER_CROSS_TOOLCHAIN)
+HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
+TARGET_BOOTLOADER_IMAGE := $(PRODUCT_OUT)/u-boot.imx
+
+BOOTLOADER_PATH := bootable/bootloader/uboot-imx/
+BOOTLOADER_CONFIG_FILE := $(BOOTLOADER_PATH)/include/config.h
+
+bootloader: $(TARGET_BOOTLOADER_IMAGE)
+.PHONY: $(TARGET_BOOTLOADER_IMAGE)
+$(TARGET_BOOTLOADER_IMAGE):
+	for ubootplat in $(TARGET_BOOTLOADER_CONFIG); do \
+		UBOOT_PLATFORM=`echo $$ubootplat | cut -d':' -f1`; \
+		UBOOT_CONFIG=`echo $$ubootplat | cut -d':' -f2`; \
+		echo $(UBOOT_PLATFORM); \
+		echo $(UBOOT_CONFIG); \
+		$(MAKE) -C bootable/bootloader/uboot-imx/ distclean $(BOOTLOADER_ENV); \
+		$(MAKE) -C bootable/bootloader/uboot-imx/ $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
+		$(MAKE) -C bootable/bootloader/uboot-imx/ $(BOOTLOADER_ENV); \
+		install -D bootable/bootloader/uboot-imx/u-boot.imx $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
+		install -D bootable/bootloader/uboot-imx/u-boot.imx $@; \
+	done
+else
+bootloader:
+endif
+
+.PHONY: kernelimage
+ifneq ($(strip $(TARGET_NO_KERNEL)),true)
+KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
+KERNEL_CFLAGS := KCFLAGS=-mno-android
+KERNEL_ENV := ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS_TOOLCHAIN) LOADADDR=$(LOAD_KERNEL_ENTRY) $(KERNEL_CFLAGS)
+HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
+INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
+TARGET_PREBUILT_KERNEL := $(PRODUCT_OUT)/kernel
+KERNEL_CONFIGURE := kernel_imx/.config
+TARGET_KERNEL_CONFIGURE := $(PRODUCT_OUT)/.config
+KERNEL_ZIMAGE    := kernel_imx/arch/arm/boot/zImage
+KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+
+
+.PHONY: $(TARGET_PREBUILT_KERNEL)
+kernelimage: $(TARGET_PREBUILT_KERNEL)
+
+$(KERNEL_CONFIGURE): kernel_imx/arch/arm/configs/$(TARGET_KERNEL_DEFCONF)
+
+$(TARGET_KERNEL_CONFIGURE): kernel_imx/arch/arm/configs/$(TARGET_KERNEL_DEFCONF) $(KERNEL_CONFIGURE)
+	$(MAKE) -C kernel_imx $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
+	install -D $(KERNEL_CONFIGURE) $(TARGET_KERNEL_CONFIGURE)
+
+$(TARGET_PREBUILT_KERNEL): $(TARGET_KERNEL_CONFIGURE)
+	$(MAKE) -C kernel_imx -j$(HOST_PROCESSOR) uImage $(KERNEL_ENV)
+	$(MAKE) -C kernel_imx dtbs $(KERNEL_ENV)
+	install -D $(KERNEL_ZIMAGE)  $(PRODUCT_OUT)/kernel
+	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
+		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
+		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
+		install -D kernel_imx/arch/arm/boot/dts/$$DTS_BOARD $(PRODUCT_OUT)/$$DTS_BOARD; \
+	done
+else
+kernelimage:
+endif
+
+.PHONY: kernelmodules
+
+kernel_modules_src_list :=
+kernel_modules_dist_list :=
+
+$(foreach cf,$(TARGET_KERNEL_MODULES),							\
+$(eval _src := $(call word-colon,1,$(cf)))						\
+$(eval _dest := $(call word-colon,2,$(cf)))						\
+$(eval kernel_modules_src_list += $(_src))						\
+$(eval kernel_modules_dest_list += $(call append-path,$(PRODUCT_OUT),$(_dest))))
+
+ifneq ($(strip $(kernel_modules_src_list)),)
+
+kernelmodules: $(TARGET_PREBUILT_KERNEL) | $(ACP)
+	$(MAKE) -C kernel_imx modules $(KERNEL_ENV)
+	$(hide) $(foreach cf, $(TARGET_KERNEL_MODULES),				\
+	$(eval _src := $(call word-colon,1,$(cf)))				\
+	$(eval _dest := $(call word-colon,2,$(cf)))				\
+	$(eval _full_dest := $(call append-path,$(PRODUCT_OUT),$(_dest)))	\
+	$(eval _dest_dir := $(call dir, $(_full_dest))) 			\
+	mkdir -p $(_dest_dir); 							\
+	$(ACP) $(_src) $(_full_dest);						\
+	)
+	@echo "install kernel modules: $(kernel_modules_src_list)"
+else
+kernelmodules:
+endif
+
 .PHONY: recoveryimage
 recoveryimage: $(INSTALLED_RECOVERYIMAGE_TARGET) $(RECOVERY_RESOURCE_ZIP)
 
