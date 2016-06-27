@@ -320,8 +320,13 @@ class EdifyGenerator(object):
       args = {'device': p.device, 'fn': fn}
       if partition_type == "MTD":
         self.script.append(
-            'write_raw_image(package_extract_file("%(fn)s"), "%(device)s");'
+            'package_extract_file("%(fn)s", "/tmp/boot.img");'
             % args)
+        self.script.append(
+            'write_raw_image("/tmp/boot.img", "bootimg");')
+
+        self.script.append(
+            'delete("/tmp/boot.img");')
       elif partition_type == "EMMC":
         if mapfn:
           args["map"] = mapfn
@@ -362,6 +367,30 @@ class EdifyGenerator(object):
           % (fn, uid, gid, dmode, fmode, capabilities)
       if selabel is not None:
         cmd += ', "selabel", "%s"' % selabel
+      cmd += ');'
+      self.script.append(cmd)
+
+  def SetPermissions_NonSelinux(self, fn, uid, gid, mode, selabel, capabilities):
+    """Set file ownership and permissions."""
+    if not self.info.get("use_set_metadata", False):
+      self.script.append('set_perm(%d, %d, 0%o, "%s");' % (uid, gid, mode, fn))
+    else:
+      if capabilities is None: capabilities = "0x0"
+      cmd = 'set_metadata("%s", "uid", %d, "gid", %d, "mode", 0%o, ' \
+          '"capabilities", %s' % (fn, uid, gid, mode, capabilities)
+      cmd += ');'
+      self.script.append(cmd)
+
+  def SetPermissionsRecursive_NonSelinux(self, fn, uid, gid, dmode, fmode, selabel, capabilities):
+    """Recursively set path ownership and permissions."""
+    if not self.info.get("use_set_metadata", False):
+      self.script.append('set_perm_recursive(%d, %d, 0%o, 0%o, "%s");'
+                         % (uid, gid, dmode, fmode, fn))
+    else:
+      if capabilities is None: capabilities = "0x0"
+      cmd = 'set_metadata_recursive("%s", "uid", %d, "gid", %d, ' \
+          '"dmode", 0%o, "fmode", 0%o, "capabilities", %s' \
+          % (fn, uid, gid, dmode, fmode, capabilities)
       cmd += ');'
       self.script.append(cmd)
 

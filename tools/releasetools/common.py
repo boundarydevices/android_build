@@ -461,6 +461,11 @@ def _BuildBootableImage(sourcedir, fs_config_file, info_dict=None,
     cmd.append("--base")
     cmd.append(open(fn).read().rstrip("\n"))
 
+  fn = os.path.join(sourcedir, "dtb")
+  if os.access(fn, os.F_OK):
+    cmd.append("--second")
+    cmd.append(open(fn).read().rstrip("\n"))
+
   fn = os.path.join(sourcedir, "pagesize")
   if os.access(fn, os.F_OK):
     cmd.append("--pagesize")
@@ -1160,10 +1165,15 @@ class DeviceSpecificParams(object):
     """Called at the start of full OTA installation."""
     return self._DoCall("FullOTA_InstallBegin")
 
-  def FullOTA_InstallEnd(self):
+  def FullOTA_InstallEnd_Ext4(self):
     """Called at the end of full OTA installation; typically this is
     used to install the image for the device's baseband processor."""
-    return self._DoCall("FullOTA_InstallEnd")
+    return self._DoCall("FullOTA_InstallEnd_Ext4")
+
+  def FullOTA_InstallEnd_Ubifs(self):
+    """Called at the end of full OTA installation; typically this is
+    used to install the image for the device's baseband processor."""
+    return self._DoCall("FullOTA_InstallEnd_Ubifs")
 
   def IncrementalOTA_Assertions(self):
     """Called after emitting the block of assertions at the top of an
@@ -1588,6 +1598,7 @@ DataImage = blockimgdiff.DataImage
 PARTITION_TYPES = {
     "yaffs2": "MTD",
     "mtd": "MTD",
+    "ubifs": "UBI",
     "ext4": "EMMC",
     "emmc": "EMMC",
     "f2fs": "EMMC",

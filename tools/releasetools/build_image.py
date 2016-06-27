@@ -30,6 +30,7 @@ import common
 import shutil
 import sparse_img
 import tempfile
+import time
 
 OPTIONS = common.OPTIONS
 
@@ -413,6 +414,17 @@ def BuildImage(in_dir, prop_dict, out_file, target_out=None):
   elif fs_type.startswith("f2fs"):
     build_command = ["mkf2fsuserimg.sh"]
     build_command.extend([out_file, prop_dict["partition_size"]])
+  elif fs_type.startswith("ubifs"):
+    # add ubifs image generate support.
+    build_command = ["mkfs_ubifs", "-d"]
+    build_command.append(in_dir)
+    build_command.append("-o")
+    build_command.append(out_file)
+    build_command.append("-s")
+    if "selinux_fc" in prop_dict:
+      build_command.append(prop_dict["selinux_fc"])
+    if prop_dict.get("mkfsubifs_flags", None):
+      build_command.extend(prop_dict["mkfsubifs_flags"].split())
   else:
     build_command = ["mkyaffs2image", "-f"]
     if prop_dict.get("mkyaffs2_extra_flags", None):
@@ -534,10 +546,11 @@ def ImagePropFromGlobalDict(glob_dict, mount_point):
       "verity_key",
       "verity_signer_cmd",
       "verity_fec"
+      "mkfsubifs_flags"
       )
   for p in common_props:
     copy_prop(p, p)
-
+  copy_prop("mkfsubifs_flags", "mkfsubifs_flags")
   d["mount_point"] = mount_point
   if mount_point == "system":
     copy_prop("fs_type", "fs_type")
