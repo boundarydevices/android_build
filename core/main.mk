@@ -965,7 +965,8 @@ droidcore: kernelimage \
 	$(INSTALLED_SYSTEMOTHERIMAGE_TARGET) \
 	$(INSTALLED_FILES_FILE) \
 	$(INSTALLED_FILES_FILE_VENDOR) \
-	$(INSTALLED_FILES_FILE_SYSTEMOTHER)
+	$(INSTALLED_FILES_FILE_SYSTEMOTHER) \
+	ubiimagesgenerate
 
 # dist_files only for putting your library into the dist directory with a full build.
 .PHONY: dist_files
