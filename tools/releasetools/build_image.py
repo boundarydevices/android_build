@@ -545,7 +545,7 @@ def ImagePropFromGlobalDict(glob_dict, mount_point):
       "verity",
       "verity_key",
       "verity_signer_cmd",
-      "verity_fec"
+      "verity_fec",
       "mkfsubifs_flags"
       )
   for p in common_props:
