@@ -1125,8 +1125,14 @@ $(TARGET_BOOTLOADER_IMAGE):
 		$(MAKE) -C bootable/bootloader/uboot-imx/ distclean $(BOOTLOADER_ENV); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ $(BOOTLOADER_ENV); \
-		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.$(TARGET_BOOTLOADER_POSTFIX); \
-		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $@; \
+		if [ $(TARGET_ARCH) = arm64 ]; then \
+		cp bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) external/imx-mkimage/iMX8dv/u-boot.bin; \
+		cp external/linux-firmware-imx/firmware/scfw_tcm/scfw_tcm.bin external/imx-mkimage/iMX8dv/scfw_tcm.bin; \
+		$(MAKE) -C external/imx-mkimage/iMX8dv/ clean; \
+		$(MAKE) -C external/imx-mkimage/iMX8dv/ flash; \
+		install -D external/imx-mkimage/iMX8dv/flash.bin $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; else \
+		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
+		fi \
 	done
 else
 bootloader:
