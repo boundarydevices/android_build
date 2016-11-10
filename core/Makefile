@@ -1102,10 +1102,8 @@ endif
 ifneq ($(strip $(TARGET_BOOTLOADER_CONFIG)),)
 ifeq ($(TARGET_ARCH),arm64)
 BOOTLOADER_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
-TARGET_BOOTLOADER_POSTFIX := bin
 else
 BOOTLOADER_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
-TARGET_BOOTLOADER_POSTFIX := imx
 endif
 BOOTLOADER_ENV := ARCH=arm CROSS_COMPILE=$(BOOTLOADER_CROSS_TOOLCHAIN)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
@@ -1120,18 +1118,13 @@ $(TARGET_BOOTLOADER_IMAGE):
 	for ubootplat in $(TARGET_BOOTLOADER_CONFIG); do \
 		UBOOT_PLATFORM=`echo $$ubootplat | cut -d':' -f1`; \
 		UBOOT_CONFIG=`echo $$ubootplat | cut -d':' -f2`; \
-		echo $(UBOOT_PLATFORM); \
-		echo $(UBOOT_CONFIG); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ distclean $(BOOTLOADER_ENV); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ $(BOOTLOADER_ENV); \
-		if [ $(TARGET_ARCH) = arm64 ]; then \
-		cp bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) external/imx-mkimage/iMX8dv/u-boot.bin; \
-		cp external/linux-firmware-imx/firmware/scfw_tcm/scfw_tcm.bin external/imx-mkimage/iMX8dv/scfw_tcm.bin; \
-		$(MAKE) -C external/imx-mkimage/iMX8dv/ clean; \
-		$(MAKE) -C external/imx-mkimage/iMX8dv/ flash; \
-		install -D external/imx-mkimage/iMX8dv/flash.bin $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; else \
 		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
+		if [ $(UBOOT_POST_PROCESS) = true ]; then \
+		echo "build post process" ; \
+		$(call build_uboot, $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_PLATFORM) \
 		fi \
 	done
 else
