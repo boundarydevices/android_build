@@ -699,7 +699,7 @@ bootimage-nodeps: $(MKBOOTIMG) $(VBOOT_SIGNER) $(FUTILITY)
 	$(hide) $(call assert-max-image-size,$(INSTALLED_BOOTIMAGE_TARGET),$(BOARD_BOOTIMAGE_PARTITION_SIZE))
 
 else ifeq (true, $(TARGET_BOOTIMAGE_USE_EXT4))
-$(INSTALLED_BOOTIMAGE_TARGET): $(MKEXTUSERIMG) $(INTERNAL_BOOTIMAGE_FILES) $(RAMDISK_TARGET)
+$(INSTALLED_BOOTIMAGE_TARGET): kernelimage bootloader $(MKEXTUSERIMG) $(INTERNAL_BOOTIMAGE_FILES) $(RAMDISK_TARGET)
 	$(call pretty,"Target boot image: $@")
 	$(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/boot $@ ext4 boot $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L boot
 
@@ -1357,25 +1357,18 @@ BOOTLOADER_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androi
 endif
 BOOTLOADER_ENV := CROSS_COMPILE=$(BOOTLOADER_CROSS_TOOLCHAIN)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
-TARGET_BOOTLOADER_IMAGE := $(PRODUCT_OUT)/u-boot$(TARGET_DTB_POSTFIX).$(TARGET_BOOTLOADER_POSTFIX)
+TARGET_BOOTLOADER_IMAGE := $(PRODUCT_OUT)/boot/u-boot.$(TARGET_BOOTLOADER_POSTFIX)
 
 BOOTLOADER_PATH := $(UBOOT_IMX_PATH)/uboot-imx/
 
 bootloader: $(TARGET_BOOTLOADER_IMAGE)
 .PHONY: $(TARGET_BOOTLOADER_IMAGE)
 $(TARGET_BOOTLOADER_IMAGE): $(BOOTLOADER_OUT)
-	for ubootplat in $(TARGET_BOOTLOADER_CONFIG); do \
-		UBOOT_PLATFORM=`echo $$ubootplat | cut -d':' -f1`; \
-		UBOOT_CONFIG=`echo $$ubootplat | cut -d':' -f2`; \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ distclean $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ mrproper $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $(BOOTLOADER_ENV) || exit 1; \
-		install -D $(BOOTLOADER_OUT)/u-boot$(TARGET_DTB_POSTFIX).$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
-		if [ $(UBOOT_POST_PROCESS) = true ]; then \
-		echo "build post process" ; \
-		$(call build_uboot, $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_PLATFORM) \
-		fi \
+	for ubootconf in $(TARGET_BOOTLOADER_CONFIG); do \
+		UBOOT_EXT=`echo $$ubootconf | sed 's/_defconfig//'`; \
+		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ $$ubootconf $(BOOTLOADER_ENV); \
+		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ $(BOOTLOADER_ENV); \
+		install -D $(UBOOT_IMX_PATH)/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/boot/u-boot.$$UBOOT_EXT; \
 	done
 else
 bootloader:
