@@ -1371,22 +1371,22 @@ endif
 
 bootloader: $(TARGET_BOOTLOADER_IMAGE)
 .PHONY: $(TARGET_BOOTLOADER_IMAGE)
-$(TARGET_BOOTLOADER_IMAGE): $(BOOTLOADER_OUT) $(TARGET_OPTEE)
-	for ubootplat in $(TARGET_BOOTLOADER_CONFIG); do \
-		UBOOT_PLATFORM=`echo $$ubootplat | cut -d':' -f1`; \
-		UBOOT_CONFIG=`echo $$ubootplat | cut -d':' -f2`; \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ distclean $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ mrproper $(BOOTLOADER_ENV); \
-		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $(BOOTLOADER_ENV) || exit 1; \
-		install -D $(BOOTLOADER_OUT)/u-boot$(TARGET_DTB_POSTFIX).$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
-		if [ $(UBOOT_POST_PROCESS) = true ]; then \
-		echo "build post process" ; \
-		$(call build_uboot, $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_PLATFORM) \
+$(TARGET_BOOTLOADER_IMAGE): $(BOOTLOADER_OUT)
+	for ubootconf in $(TARGET_BOOTLOADER_CONFIG); do \
+		UBOOT_EXT=`echo $$ubootconf | sed 's/_defconfig//'`; \
+		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ distclean; \
+		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $$ubootconf $(BOOTLOADER_ENV); \
+		$(MAKE) -C $(UBOOT_IMX_PATH)/uboot-imx/ O=$(realpath $(BOOTLOADER_OUT)) $(BOOTLOADER_ENV); \
+		if [ "$(UBOOT_POST_PROCESS)" = "true" ]; then \
+			echo "Call U-Boot post-build process" ; \
+			$(call build_uboot, $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_EXT) \
+		else \
+			echo "Copy to U-Boot binary to boot/ folder" ; \
+			install -D $(BOOTLOADER_OUT)/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/boot/u-boot.$$UBOOT_EXT; \
 		fi; \
-		if [ $(PRODUCT_IMX_DRM) = true ]; then \
-		echo "build post process with tee" ; \
-		$(call build_uboot_w_tee,  $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_PLATFORM) \
+		if [ "$(PRODUCT_IMX_DRM)" = "true" ]; then \
+			echo "Call U-Boot post-build process with TEE" ; \
+			$(call build_uboot_w_tee,  $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_EXT) \
 		fi \
 	done
 else
