@@ -1126,7 +1126,7 @@ BOOTLOADER_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androi
 endif
 BOOTLOADER_ENV := ARCH=arm CROSS_COMPILE=$(BOOTLOADER_CROSS_TOOLCHAIN)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
-TARGET_BOOTLOADER_IMAGE := $(PRODUCT_OUT)/u-boot.$(TARGET_BOOTLOADER_POSTFIX)
+TARGET_BOOTLOADER_IMAGE := $(PRODUCT_OUT)/boot/u-boot.$(TARGET_BOOTLOADER_POSTFIX)
 
 BOOTLOADER_PATH := bootable/bootloader/uboot-imx/
 BOOTLOADER_CONFIG_FILE := $(BOOTLOADER_PATH)/include/config.h
@@ -1134,17 +1134,11 @@ BOOTLOADER_CONFIG_FILE := $(BOOTLOADER_PATH)/include/config.h
 bootloader: $(TARGET_BOOTLOADER_IMAGE)
 .PHONY: $(TARGET_BOOTLOADER_IMAGE)
 $(TARGET_BOOTLOADER_IMAGE):
-	for ubootplat in $(TARGET_BOOTLOADER_CONFIG); do \
-		UBOOT_PLATFORM=`echo $$ubootplat | cut -d':' -f1`; \
-		UBOOT_CONFIG=`echo $$ubootplat | cut -d':' -f2`; \
-		$(MAKE) -C bootable/bootloader/uboot-imx/ distclean $(BOOTLOADER_ENV); \
-		$(MAKE) -C bootable/bootloader/uboot-imx/ $$UBOOT_CONFIG $(BOOTLOADER_ENV); \
+	for ubootconf in $(TARGET_BOOTLOADER_CONFIG); do \
+		UBOOT_EXT=`echo $$ubootconf | sed 's/_defconfig//'`; \
+		$(MAKE) -C bootable/bootloader/uboot-imx/ $$ubootconf $(BOOTLOADER_ENV); \
 		$(MAKE) -C bootable/bootloader/uboot-imx/ $(BOOTLOADER_ENV); \
-		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/u-boot-$$UBOOT_PLATFORM.imx; \
-		if [ $(UBOOT_POST_PROCESS) = true ]; then \
-		echo "build post process" ; \
-		$(call build_uboot, $(TARGET_BOOTLOADER_POSTFIX), $$UBOOT_PLATFORM) \
-		fi \
+		install -D bootable/bootloader/uboot-imx/u-boot.$(TARGET_BOOTLOADER_POSTFIX) $(PRODUCT_OUT)/boot/u-boot.$$UBOOT_EXT; \
 	done
 else
 bootloader:
