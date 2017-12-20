@@ -935,6 +935,9 @@ systemotherimage: $(INSTALLED_SYSTEMOTHERIMAGE_TARGET)
 .PHONY: bootimage
 bootimage: $(INSTALLED_BOOTIMAGE_TARGET)
 
+.PHONY: recoveryimage
+recoveryimage: $(INSTALLED_RECOVERYIMAGE_TARGET)
+
 # phony target that include any targets in $(ALL_MODULES)
 .PHONY: all_modules
 ifndef BUILD_MODULES_IN_PATHS
