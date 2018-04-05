@@ -705,8 +705,8 @@ $(INSTALLED_BOOTIMAGE_TARGET): kernelimage bootloader $(MKEXTUSERIMG) $(INTERNAL
 
 .PHONY: bootimage-nodeps
 bootimage-nodeps: $(MKEXTUSERIMG)
-	@echo "make $@: ignoring dependencies"
-	$(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/boot $@ ext4 boot $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L boot
+	@echo "make $(INSTALLED_BOOTIMAGE_TARGET): ignoring dependencies"
+	$(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/boot $(INSTALLED_BOOTIMAGE_TARGET) ext4 boot $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L boot
 
 else # PRODUCT_SUPPORTS_VBOOT != true
 
