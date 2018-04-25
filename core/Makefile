@@ -579,7 +579,7 @@ else
   INSTALLED_2NDBOOTLOADER_TARGET :=
 endif # TARGET_NO_BOOTLOADER
 ifneq ($(strip $(TARGET_NO_KERNEL)),true)
-  INSTALLED_KERNEL_TARGET := $(KERNEL_OUT)/kernel_img
+  INSTALLED_KERNEL_TARGET := $(PRODUCT_OUT)/kernel
 else
   INSTALLED_KERNEL_TARGET :=
 endif
@@ -1397,28 +1397,23 @@ endif
 ifneq ($(strip $(TARGET_NO_KERNEL)),true)
 ifeq ($(TARGET_ARCH),arm64)
 KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
-KERNEL_IMAGE_NAME    := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/Image
+KERNEL_IMAGE_NAME    := Image
 else
 KERNEL_CROSS_TOOLCHAIN := `pwd`/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androideabi-
-KERNEL_IMAGE_NAME    := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/zImage
+KERNEL_IMAGE_NAME    := zImage
 endif
+KERNEL_IMAGE_PATH := $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/$(KERNEL_IMAGE_NAME)
 KERNEL_CFLAGS := KCFLAGS=-mno-android
 KERNEL_ENV := ARCH=$(TARGET_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_TOOLCHAIN) LOADADDR=$(LOAD_KERNEL_ENTRY) $(KERNEL_CFLAGS)
 HOST_PROCESSOR := $(shell cat /proc/cpuinfo | grep processor | wc -l)
-INSTALLED_KERNEL_TARGET := $(KERNEL_OUT)/kernel_img
-TARGET_PREBUILT_KERNEL := $(KERNEL_OUT)/kernel_img
-KERNEL_CONFIGURE := $(KERNEL_IMX_PATH)/kernel_imx/.config
+TARGET_PREBUILT_KERNEL := $(INSTALLED_KERNEL_TARGET)
 TARGET_KERNEL_CONFIGURE := $(KERNEL_OUT)/.config
-
 
 .PHONY: $(TARGET_PREBUILT_KERNEL)
 kernelimage: $(TARGET_PREBUILT_KERNEL)
 
-$(KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF)
-
-$(TARGET_KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF) $(KERNEL_CONFIGURE)
-	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
-	install -D $(KERNEL_CONFIGURE) $(TARGET_KERNEL_CONFIGURE)
+$(TARGET_KERNEL_CONFIGURE): $(KERNEL_IMX_PATH)/kernel_imx/arch/$(TARGET_ARCH)/configs/$(TARGET_KERNEL_DEFCONF)
+	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) $(TARGET_KERNEL_DEFCONF) $(KERNEL_ENV)
 
 ifeq ($(TARGET_ARCH),arm64)
 DTS_ADDITIONAL_PATH := freescale
@@ -1429,11 +1424,12 @@ $(TARGET_PREBUILT_KERNEL): $(TARGET_KERNEL_CONFIGURE) | $(KERNEL_OUT)
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx mrproper
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) -j$(HOST_PROCESSOR) $(KERNEL_ENV)
 	$(MAKE) -C $(KERNEL_IMX_PATH)/kernel_imx O=$(realpath $(KERNEL_OUT)) dtbs $(KERNEL_ENV)
-	install -D $(KERNEL_IMAGE_NAME)  $(KERNEL_OUT)/kernel_img
+	install -D $(KERNEL_IMAGE_PATH) $(INSTALLED_KERNEL_TARGET)
+	install -D $(KERNEL_IMAGE_PATH) $(PRODUCT_OUT)/boot/$(KERNEL_IMAGE_NAME)
 	for dtsplat in $(TARGET_BOARD_DTS_CONFIG); do \
 		DTS_PLATFORM=`echo $$dtsplat | cut -d':' -f1`; \
 		DTS_BOARD=`echo $$dtsplat | cut -d':' -f2`; \
-		install -D $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(KERNEL_OUT)/$$DTS_BOARD; \
+		install -D $(KERNEL_OUT)/arch/$(TARGET_ARCH)/boot/dts/$(DTS_ADDITIONAL_PATH)/$$DTS_BOARD $(PRODUCT_OUT)/boot/$$DTS_BOARD; \
 	done
 else
 kernelimage:
