@@ -1286,7 +1286,7 @@ define build-recoveryimage-target
   if [ "true" = "$(TARGET_RECOVERYIMAGE_USE_EXT4)" ]; then \
     rm -rf $(PRODUCT_OUT)/recovery_img; \
     cp -rf $(PRODUCT_OUT)/boot $(PRODUCT_OUT)/recovery_img; \
-    mkimage -A arm -O linux -T ramdisk -n "RAM Disk" -d $(recovery_ramdisk) \
+    mkimage -A $(TARGET_ARCH) -O linux -T ramdisk -n "RAM Disk" -d $(recovery_ramdisk) \
     $(PRODUCT_OUT)/uramdisk-recovery.img; \
     cp -f $(PRODUCT_OUT)/uramdisk-recovery.img $(PRODUCT_OUT)/recovery_img/uramdisk.img; \
     $(MKEXTUSERIMG) $(INTERNAL_USERIMAGES_SPARSE_EXT_FLAG) $(PRODUCT_OUT)/recovery_img $@ ext4 recovery $(BOARD_BOOTIMAGE_PARTITION_SIZE) -L recovery ; \
