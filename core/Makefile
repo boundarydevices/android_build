@@ -2497,6 +2497,7 @@ ifneq (,$(INSTALLED_RECOVERYIMAGE_TARGET)$(filter true,$(BOARD_USES_RECOVERY_AS_
 	$(hide) mkdir -p $(zip_root)/$(PRIVATE_RECOVERY_OUT)
 	$(hide) $(call package_files-copy-root, \
 		$(TARGET_RECOVERY_ROOT_OUT),$(zip_root)/$(PRIVATE_RECOVERY_OUT)/RAMDISK)
+ifneq (true, $(TARGET_RECOVERYIMAGE_USE_EXT4))
 ifdef INSTALLED_KERNEL_TARGET
 	$(hide) cp $(INSTALLED_KERNEL_TARGET) $(zip_root)/$(PRIVATE_RECOVERY_OUT)/kernel
 endif
@@ -2512,6 +2513,14 @@ endif
 ifdef BOARD_KERNEL_PAGESIZE
 	$(hide) echo "$(BOARD_KERNEL_PAGESIZE)" > $(zip_root)/$(PRIVATE_RECOVERY_OUT)/pagesize
 endif
+else
+	# copy all the files needed to create the recovery image
+	$(hide) cp $(PRODUCT_OUT)/boot/* $(zip_root)/$(PRIVATE_RECOVERY_OUT)/
+	$(hide) cp $(PRODUCT_OUT)/uramdisk-recovery.img $(zip_root)/$(PRIVATE_RECOVERY_OUT)/uramdisk.img
+	# copy the pre-built recovery.img ext4 file
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) simg2img $(INSTALLED_RECOVERYIMAGE_TARGET) $(zip_root)/IMAGES/recovery.img
+endif # TARGET_RECOVERYIMAGE_USE_EXT4
 endif # INSTALLED_RECOVERYIMAGE_TARGET defined or BOARD_USES_RECOVERY_AS_BOOT is true
 	@# Components of the boot image
 	$(hide) mkdir -p $(zip_root)/BOOT
@@ -2525,6 +2534,7 @@ else
 endif
 	@# If we are using recovery as boot, this is already done when processing recovery.
 ifneq ($(BOARD_USES_RECOVERY_AS_BOOT),true)
+ifneq (true, $(TARGET_BOOTIMAGE_USE_EXT4))
 ifdef INSTALLED_KERNEL_TARGET
 	$(hide) cp $(INSTALLED_KERNEL_TARGET) $(zip_root)/BOOT/kernel
 endif
@@ -2540,6 +2550,13 @@ endif
 ifdef BOARD_KERNEL_PAGESIZE
 	$(hide) echo "$(BOARD_KERNEL_PAGESIZE)" > $(zip_root)/BOOT/pagesize
 endif
+else
+	# copy all the files needed to create the boot image
+	$(hide) cp $(PRODUCT_OUT)/boot/* $(zip_root)/BOOT/
+	# copy the pre-built boot.img ext4 file
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) simg2img $(INSTALLED_BOOTIMAGE_TARGET) $(zip_root)/IMAGES/boot.img
+endif # TARGET_BOOTIMAGE_USE_EXT4
 endif # BOARD_USES_RECOVERY_AS_BOOT
 ifdef BOARD_KERNEL_DTS
 	$(hide) echo "$(BOARD_KERNEL_DTS)" > $(zip_root)/BOOT/dtb
