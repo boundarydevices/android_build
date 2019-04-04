@@ -1618,6 +1618,7 @@ diff_tool := $(HOST_OUT_EXECUTABLES)/imgdiff
 endif
 intermediates := $(call intermediates-dir-for,PACKAGING,recovery_patch)
 RECOVERY_FROM_BOOT_PATCH := $(intermediates)/recovery_from_boot.p
+ifneq ($(TARGET_RECOVERYIMAGE_USE_EXT4),true)
 $(RECOVERY_FROM_BOOT_PATCH): PRIVATE_DIFF_TOOL := $(diff_tool)
 $(RECOVERY_FROM_BOOT_PATCH): \
 		$(INSTALLED_RECOVERYIMAGE_TARGET) \
@@ -1626,6 +1627,12 @@ $(RECOVERY_FROM_BOOT_PATCH): \
 	@echo "Construct recovery from boot"
 	mkdir -p $(dir $@)
 	$(PRIVATE_DIFF_TOOL) $(INSTALLED_BOOTIMAGE_TARGET) $(INSTALLED_RECOVERYIMAGE_TARGET) $@
+else
+$(RECOVERY_FROM_BOOT_PATCH):
+	@echo "Fake recovery_from_boot.p creation"
+	mkdir -p $(dir $@)
+	@echo "recovery_from_boot.p cannot be used with ext4 images" > $@
+endif # $(TARGET_RECOVERYIMAGE_USE_EXT4) == true
 else # $(BOARD_USES_FULL_RECOVERY_IMAGE) == true
 RECOVERY_FROM_BOOT_PATCH := $(INSTALLED_RECOVERYIMAGE_TARGET)
 endif
