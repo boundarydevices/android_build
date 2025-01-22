@@ -667,6 +667,10 @@ def ProcessTargetFiles(input_tf_zip, output_tf_zip, misc_info,
     elif filename == "META/misc_info.txt":
       pass
 
+    # Skip META/partition-table.bpt since we will re-create it later with new guid.
+    elif filename == "META/partition-table.bpt":
+      pass
+
     elif (OPTIONS.remove_avb_public_keys and
           (filename.startswith("BOOT/RAMDISK/avb/") or
            filename.startswith("BOOT/RAMDISK/first_stage_ramdisk/avb/"))):
